@@ -52,8 +52,10 @@
   will-change: transform;
 }
 
-.croot-ready.croot-instant .croot-stage {
-  transition: none;
+/* Mode instan (load awal, resize): matikan semua transisi, termasuk opacity node. */
+.croot-ready.croot-instant .croot-stage,
+.croot-ready.croot-instant .croot-node {
+  transition: none !important;
 }
 
 .croot-ready .croot-node {
