@@ -123,7 +123,7 @@ jobs:
       # langsung diperbarui. Butuh secret LANDING_DISPATCH_TOKEN (fine-grained PAT,
       # repo crootss/crootss.github.io, permission Contents: read & write).
       # Tanpa secret, langkah ini dilewati dan landing tetap terbarui lewat jadwal harian.
-      - name: Kabari landing page
+      - name: Kabari landing page dan docs
         if: steps.ver.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.LANDING_DISPATCH_TOKEN }}
@@ -133,6 +133,13 @@ jobs:
             echo "LANDING_DISPATCH_TOKEN belum diset, lewati."
             exit 0
           fi
-          gh api repos/crootss/crootss.github.io/dispatches \
-            -f event_type=crootss-release \
-            -f "client_payload[tag]=$TAG"
+          # Landing dan dokumentasi sama-sama memakai versi yang dipin. Token
+          # butuh akses Contents read/write ke kedua repo; bila salah satu gagal,
+          # jadwal harian di repo itu tetap memperbaruinya.
+          for repo in crootss/crootss.github.io crootss/docs; do
+            gh api "repos/$repo/dispatches" \
+              -f event_type=crootss-release \
+              -f "client_payload[tag]=$TAG" \
+              && echo "$repo dikabari" \
+              || echo "::warning::Gagal mengabari $repo"
+          done

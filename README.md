@@ -2,11 +2,13 @@
 
 Engine presentasi spatial 3D berbasis **CSS 3D transforms** murni: `crootss.css` (layout & animasi) + `croot.js` (kamera & navigasi). Tanpa dependency, ±9 KB minified.
 
+Dokumentasi lengkap: https://crootss.if.co.id/docs/
+
 ## Pakai via CDN
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/crootss.min.css">
-<script type="module" src="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/croot.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/crootss.min.css">
+<script type="module" src="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/croot.min.js"></script>
 ```
 
 `croot.js` adalah ES module tanpa dependency dan aktif otomatis. Selalu pin versi (lihat [Releases](https://github.com/crootss/crootss/releases)), jangan `@latest`.
@@ -54,7 +56,7 @@ Posisi juga bisa ditulis sebagai custom property di CSS, misalnya untuk tata let
 ## API
 
 ```js
-import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/croot.min.js';
+import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/croot.min.js';
 
 const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
