@@ -71,4 +71,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -am "docs: perbarui versi:$CHANGED"
+          # Dua rilis (library dan tema) bisa memicu workflow ini hampir bersamaan;
+          # ambil commit terbaru dulu supaya push tidak ditolak.
+          git pull --rebase
           git push
