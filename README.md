@@ -7,8 +7,8 @@ Dokumentasi lengkap: https://crootss.if.co.id/docs/
 ## Pakai via CDN
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/crootss.min.css">
-<script type="module" src="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/croot.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.4.0/crootss.min.css">
+<script type="module" src="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.4.0/croot.min.js"></script>
 ```
 
 `croot.js` adalah ES module tanpa dependency dan aktif otomatis. Selalu pin versi (lihat [Releases](https://github.com/crootss/crootss/releases)), jangan `@latest`.
@@ -69,7 +69,7 @@ Kelas diagram (`dg-*`, `bmc`, `flow`, `timeline`) dan animasi (`a-*`) ada di [cr
 ## API
 
 ```js
-import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/croot.min.js';
+import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.4.0/croot.min.js';
 
 const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: '#peta' });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
