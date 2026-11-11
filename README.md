@@ -78,10 +78,60 @@ deck.root.addEventListener('croot:enter', (e) => console.log(e.target, e.detail.
 
 Class status: `.croot-ready`, `.croot-overview`, `.croot-moving` (root); `.croot-active` + `aria-current="step"` (node). `prefers-reduced-motion` dihormati otomatis.
 
+## Menjalankan slide di komputer sendiri
+
+`croot.js` adalah ES module, dan browser **tidak** mau memuat module dari `file://` (klik dua kali `index.html`). Jalankan server lokal di folder slide, lalu buka `http://localhost:8080/`.
+
+**Windows (PowerShell, tanpa instal apa pun):** buka PowerShell di folder slide, tempel seluruh blok ini, lalu tekan Enter.
+
+```powershell
+function start-server {
+  # Content-Type wajib: browser menolak ES module tanpa MIME type JavaScript.
+  $types = @{
+    '.html'='text/html; charset=utf-8'; '.css'='text/css; charset=utf-8'
+    '.js'='text/javascript; charset=utf-8'; '.mjs'='text/javascript; charset=utf-8'
+    '.json'='application/json'; '.svg'='image/svg+xml'; '.ico'='image/x-icon'
+    '.png'='image/png'; '.jpg'='image/jpeg'; '.jpeg'='image/jpeg'
+    '.gif'='image/gif'; '.webp'='image/webp'; '.woff2'='font/woff2'
+  }
+  $listener = [System.Net.HttpListener]::new()
+  $listener.Prefixes.Add("http://localhost:8080/")
+  $listener.Start()
+  Write-Host "Server jalan di http://localhost:8080/ (tutup jendela untuk berhenti)"
+  while ($listener.IsListening) {
+    $context = $listener.GetContext()
+    $response = $context.Response
+    $path = Join-Path $pwd.Path $context.Request.Url.LocalPath.TrimStart('/')
+    if (!(Test-Path $path) -or (Test-Path $path -PathType Container)) {
+      $path = Join-Path $path "index.html"
+    }
+    if (Test-Path $path -PathType Leaf) {
+      $type = $types[[System.IO.Path]::GetExtension($path).ToLower()]
+      if ($type) { $response.ContentType = $type }
+      $bytes = [System.IO.File]::ReadAllBytes($path)
+      $response.ContentLength64 = $bytes.Length
+      $response.OutputStream.Write($bytes, 0, $bytes.Length)
+    } else {
+      $response.StatusCode = 404
+    }
+    $response.Close()
+  }
+}
+start-server
+```
+
+**macOS / Linux (atau Windows yang sudah ada Python):**
+
+```sh
+python3 -m http.server 8080
+```
+
+Untuk demo di repo ini, jalankan server di root repo lalu buka `http://localhost:8080/demo/`.
+
 ## Pengembangan
 
-Mengikuti [konvensi CrootJS](https://croot.js.org/docs/conventions): vanilla ES module tanpa build, HTML/CSS/JS di file terpisah (tanpa `<style>`, `<script>` inline, `style=""`, atau `onclick`).
+Mengikuti [konvensi CrootJS](https://croot.js.org/docs/conventions): vanilla ES module tanpa build, HTML/CSS/JS di file terpisah (tanpa `<style>`, `<script>` inline, `style=""`, atau `onclick`). Panduan tim development ada di [crootss/crootss-dev](https://github.com/crootss/crootss-dev).
 
-- Demo: jalankan server lokal di root repo (mis. `python3 -m http.server`), buka `/demo/`. ES module tidak bisa dimuat lewat `file://`.
+- Demo: lihat [Menjalankan slide di komputer sendiri](#menjalankan-slide-di-komputer-sendiri).
 - Tes: `node --test 'test/*.test.mjs'`
 - Rilis: otomatis. Setiap push ke `main` yang mengubah `croot.js` / `crootss.css` membuat tag + GitHub Release (lihat `.github/workflows/release.yml`). Naik versi mengikuti pesan commit: `feat:` → minor, `feat!:` / `BREAKING CHANGE` → major, lainnya → patch. Bisa dipaksa dengan `#minor` / `#major`.

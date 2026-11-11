@@ -118,3 +118,21 @@ jobs:
             --title "$TAG" \
             --notes-file notes.md \
             --generate-notes
+
+      # Memicu workflow "Update crootss" di repo landing agar versi yang dipin
+      # langsung diperbarui. Butuh secret LANDING_DISPATCH_TOKEN (fine-grained PAT,
+      # repo crootss/crootss.github.io, permission Contents: read & write).
+      # Tanpa secret, langkah ini dilewati dan landing tetap terbarui lewat jadwal harian.
+      - name: Kabari landing page
+        if: steps.ver.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.LANDING_DISPATCH_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "LANDING_DISPATCH_TOKEN belum diset, lewati."
+            exit 0
+          fi
+          gh api repos/crootss/crootss.github.io/dispatches \
+            -f event_type=crootss-release \
+            -f "client_payload[tag]=$TAG"
