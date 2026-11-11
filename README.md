@@ -42,15 +42,28 @@ Tanpa JS, semua node tampil sebagai dokumen biasa (tetap bisa dibaca & diindeks)
 | `data-croot="manual"` | Pada root: matikan auto-init. |
 | `data-croot-fit` | Pada root: porsi layar yang diisi node (default `0.9`). |
 | `data-croot-pullback` | Pada root: kekuatan efek kamera mundur di tengah perpindahan (default `1`, `0` = mati). |
+| `data-croot-overview` | Pada root: selector node big picture. Overview membingkai node ini, dan → setelah langkah terakhir kembali ke sana. |
 
 Posisi juga bisa ditulis sebagai custom property di CSS, misalnya untuk tata letak berbeda di ponsel: `#kartu { --croot-x: 1400; }`. Nilainya tidak terwariskan ke node anak.
+
+## Konvensi: mulai dari big picture
+
+Presentasi crootss dimulai dari gambaran besar lalu zoom ke detail:
+
+1. Buat **satu node big picture** berisi diagram seluruh presentasi (concept map, system context, rich picture, Business Model Canvas, alur, atau timeline) dan daftarkan dengan `data-croot-overview="#id"` pada root.
+2. Tampilkan big picture di awal (langkah 1, atau 2 setelah sampul).
+3. Setiap cabang diagram adalah blok; detailnya node anak atau blok di sebelahnya. Urutan: blok → detail → blok berikutnya.
+4. Blok satu bidang dengan big picture supaya overview terbaca sebagai satu gambar.
+5. `Esc` dan langkah setelah yang terakhir kembali ke big picture.
+
+Kelas diagram (`dg-*`, `bmc`, `flow`, `timeline`) dan animasi (`a-*`) ada di [crootss/themes](https://github.com/crootss/themes). Panduan lengkap: https://crootss.if.co.id/docs/big-picture/
 
 ## Navigasi
 
 - **Kamera 3D**: saat pindah ke node yang jauh, kamera mundur sejenak lalu maju lagi (seperti Prezi), sehingga ruang 3D di sekitarnya terlihat. Atur dengan `data-croot-pullback`.
 - **Linier**: `→ ↓ Spasi PageDown` / `← ↑ Shift+Spasi PageUp`, `Home` / `End`, swipe.
 - **Klik langsung**: klik node mana pun; urutan linier ikut tersinkron.
-- **Overview**: `Esc` → kamera mundur sampai seluruh kanvas muat di layar (dihitung dari bounding box).
+- **Overview**: `Esc` → kamera membingkai node big picture (`data-croot-overview`), atau tanpa itu mundur sampai seluruh kanvas muat di layar.
 - **URL**: setiap node punya alamat `#/<id>`, overview di `#/overview`.
 
 ## API
@@ -58,9 +71,9 @@ Posisi juga bisa ditulis sebagai custom property di CSS, misalnya untuk tata let
 ```js
 import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.3.0/croot.min.js';
 
-const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true });
+const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: '#peta' });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
-deck.current; deck.index; deck.isOverview; deck.steps; deck.destroy();
+deck.current; deck.index; deck.isOverview; deck.steps; deck.bigPicture; deck.destroy();
 
 deck.root.addEventListener('croot:enter', (e) => console.log(e.target, e.detail.index));
 // juga: croot:leave (di node), croot:overview (di root)

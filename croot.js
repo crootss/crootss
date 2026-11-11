@@ -45,14 +45,19 @@ export function croot(root, options) {
   if (!root) throw new Error('croot: root element tidak ditemukan');
   if (root.croot) return root.croot;
 
-  options = Object.assign({ fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true }, options);
+  options = Object.assign({ fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: null }, options);
   if (root.dataset.crootFit) options.fit = num(root.dataset.crootFit, options.fit);
   if (root.dataset.crootPullback) options.pullback = num(root.dataset.crootPullback, options.pullback);
+  if (root.dataset.crootOverview) options.overview = root.dataset.crootOverview;
 
   var stage = root.querySelector('.croot-stage');
   if (!stage) throw new Error('croot: .croot-stage tidak ditemukan');
 
   var all = Array.prototype.slice.call(stage.querySelectorAll(NODE));
+  // Node "big picture" (opsional): overview membingkai node ini, bukan sekadar
+  // semua node, sehingga Esc selalu kembali ke gambaran besar presentasi.
+  var big = typeof options.overview === 'string' ? stage.querySelector(options.overview) : options.overview;
+  if (big && !(stage.contains(big) && big.matches(NODE))) big = null;
   var steps = [];        // node dalam urutan linier
   var current = null;    // node aktif
   var index = -1;        // index linier terakhir (tetap saat node bebas diklik)
@@ -148,6 +153,7 @@ export function croot(root, options) {
   }
 
   function overviewCamera() {
+    if (big) return nodeCamera(big);
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     all.forEach(function (el) {
       var m = worldMatrix(el), w = el.offsetWidth / 2, h = el.offsetHeight / 2;
@@ -217,6 +223,8 @@ export function croot(root, options) {
 
   function next() {
     if (inOverview && current) return goto(current);
+    // Dengan big picture, langkah setelah yang terakhir kembali ke gambaran besar.
+    if (big && index === steps.length - 1 && current === steps[index]) return overview(true);
     return goto(Math.min(index + 1, steps.length - 1));
   }
   function prev() {
@@ -329,6 +337,7 @@ export function croot(root, options) {
   var api = {
     root: root,
     steps: steps,
+    bigPicture: big,
     goto: goto,
     next: next,
     prev: prev,
