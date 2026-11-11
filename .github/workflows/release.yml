@@ -1,0 +1,120 @@
+# Auto-tag & release setiap push ke main yang mengubah file library.
+#
+# Aturan naik versi (dibaca dari pesan commit sejak tag terakhir):
+#   major : "BREAKING CHANGE", "feat!:" / "fix!:" dsb, atau "#major"
+#   minor : "feat:" / "feat(scope):", atau "#minor"
+#   patch : selain itu (default)
+# Tag pertama: v0.1.0. Bisa juga dijalankan manual (Actions → Release → Run workflow).
+#
+# Setelah tag terbit, CDN langsung tersedia via jsDelivr:
+#   https://cdn.jsdelivr.net/gh/crootss/crootss@<versi>/croot.min.js
+#   https://cdn.jsdelivr.net/gh/crootss/crootss@<versi>/crootss.min.css
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - croot.js
+      - crootss.css
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Naikkan versi
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tes
+        run: |
+          node --check croot.js
+          node --test 'test/*.test.js'
+
+      - name: Tentukan versi berikutnya
+        id: ver
+        env:
+          BUMP_INPUT: ${{ inputs.bump }}
+        run: |
+          if git tag --points-at HEAD | grep -q '^v'; then
+            echo "Commit ini sudah punya tag, lewati."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          if [ -z "$last" ]; then
+            echo "tag=v0.1.0" >> "$GITHUB_OUTPUT"
+            echo "Belum ada tag, mulai dari v0.1.0"
+            exit 0
+          fi
+
+          bump="${BUMP_INPUT:-auto}"
+          if [ "$bump" = "auto" ]; then
+            log=$(git log "$last"..HEAD --format='%s%n%b')
+            if echo "$log" | grep -qE 'BREAKING CHANGE|^[a-z]+(\([^)]*\))?!:|#major'; then
+              bump=major
+            elif echo "$log" | grep -qE '^feat(\([^)]*\))?:|#minor'; then
+              bump=minor
+            else
+              bump=patch
+            fi
+          fi
+
+          IFS=. read -r major minor patch <<< "${last#v}"
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            *)     patch=$((patch + 1)) ;;
+          esac
+          echo "tag=v$major.$minor.$patch" >> "$GITHUB_OUTPUT"
+          echo "$last → v$major.$minor.$patch ($bump)"
+
+      - name: Build file minified
+        if: steps.ver.outputs.skip != 'true'
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          mkdir dist
+          npx --yes esbuild@0.24.0 croot.js --minify --legal-comments=inline --outfile=dist/croot.min.js
+          npx --yes esbuild@0.24.0 crootss.css --minify --legal-comments=inline --outfile=dist/crootss.min.css
+          cp croot.js crootss.css dist/
+          sed -i "1s|^|/* $TAG */\n|" dist/*
+
+      - name: Buat tag & GitHub Release
+        if: steps.ver.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          cat > notes.md <<EOF
+          ## CDN
+
+          \`\`\`html
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/crootss.min.css">
+          <script src="https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/croot.min.js"></script>
+          \`\`\`
+          EOF
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "$TAG" \
+            --notes-file notes.md \
+            --generate-notes

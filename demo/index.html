@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crootss demo</title>
+  <link rel="stylesheet" href="../crootss.css">
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at 50% 40%, #232a3d 0%, #0d1018 70%);
+      color: #e8ecf4;
+      font: 32px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .croot-node {
+      padding: 56px 64px;
+      border-radius: 28px;
+      background: #1a2030;
+      border: 2px solid #2e3850;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, .45);
+    }
+    .croot-node h1 { font-size: 96px; margin: 0 0 16px; line-height: 1.05; }
+    .croot-node h2 { font-size: 64px; margin: 0 0 16px; }
+    .croot-node p { margin: 0 0 12px; }
+    .croot-node small { color: #8b96b0; }
+    .accent { color: #ff6f61; }
+    .bare { background: none; border: 0; box-shadow: none; text-align: center; }
+    .tile { background: #ff6f61; color: #1a1a1a; border: 0; }
+    .tile h2 { font-size: 80px; }
+    .tile.b { background: #f7c948; }
+    .tile.c { background: #59c3c3; }
+    .zoom { height: 720px; }
+    .zoom .croot-node { width: 960px; height: 640px; background: #262f47; }
+    .zoom .croot-node h2 { font-size: 80px; }
+    code { font-size: .85em; color: #f7c948; }
+    button {
+      font: inherit; font-size: 28px; padding: 12px 28px; border-radius: 999px;
+      border: 2px solid #59c3c3; background: none; color: #59c3c3; cursor: pointer;
+    }
+    .hud {
+      position: fixed; left: 16px; bottom: 12px; z-index: 10;
+      font: 14px system-ui, sans-serif; color: #8b96b0;
+    }
+    .hud button { font-size: 14px; padding: 6px 14px; margin-right: 6px; }
+  </style>
+</head>
+<body>
+
+<div class="croot-viewport" data-croot>
+  <div class="croot-stage">
+
+    <section class="croot-node bare" data-croot-step="1" data-croot-x="0" data-croot-y="0" aria-label="Judul">
+      <h1>croot<span class="accent">ss</span></h1>
+      <p>Presentasi spatial 3D dengan CSS murni.</p>
+      <small>← → spasi untuk navigasi · Esc untuk overview · klik node mana saja</small>
+    </section>
+
+    <section class="croot-node" data-croot-step="2" data-croot-x="1400" data-croot-y="0">
+      <h2>Deklaratif</h2>
+      <p>Posisi node cukup ditulis di HTML:</p>
+      <p><code>data-croot-x / y / z / rx / ry / rz / scale</code></p>
+    </section>
+
+    <section class="croot-node" data-croot-step="3" data-croot-x="2800" data-croot-y="0" data-croot-rz="90">
+      <h2>Rotasi</h2>
+      <p>Kamera ikut berputar mengikuti node (<code>data-croot-rz="90"</code>).</p>
+    </section>
+
+    <section class="croot-node" data-croot-step="4" data-croot-x="2800" data-croot-y="1400" data-croot-z="-1200" data-croot-ry="35">
+      <h2>Kedalaman</h2>
+      <p>Node bisa berada di sumbu Z dan diputar 3D.</p>
+    </section>
+
+    <section class="croot-node tile" data-croot-step="5" data-croot-x="1400" data-croot-y="1400" data-croot-scale="2">
+      <h2>Skala</h2>
+      <p>Node ini 2× lebih besar. Kamera menyesuaikan.</p>
+    </section>
+
+    <!-- Node bersarang: anak berada di dalam induk, skala 0.25 -->
+    <section class="croot-node zoom" id="zoom" data-croot-step="6" data-croot-x="-200" data-croot-y="1500">
+      <h2>Zoom bersarang</h2>
+      <p>Tiga node di bawah ini adalah anak dari node ini. Lanjut atau klik untuk menukik.</p>
+
+      <div class="croot-node" data-croot-step="6.1" data-croot-x="-300" data-croot-y="170" data-croot-scale="0.25">
+        <h2>6.1</h2>
+        <p>Koordinat anak relatif terhadap pusat induk.</p>
+      </div>
+      <div class="croot-node" data-croot-step="6.2" data-croot-x="0" data-croot-y="170" data-croot-scale="0.25">
+        <h2>6.2</h2>
+        <p>Teks tetap tajam: di-raster ulang setelah kamera berhenti.</p>
+      </div>
+      <div class="croot-node" data-croot-step="6.10" data-croot-x="300" data-croot-y="170" data-croot-scale="0.25">
+        <h2>6.10</h2>
+        <p>Urutan step per segmen: 6.2 → 6.10 → 7.</p>
+      </div>
+    </section>
+
+    <section class="croot-node tile b" data-croot-step="7" data-croot-x="-1400" data-croot-y="1400" data-croot-rx="-25">
+      <h2>Klik &amp; keyboard sinkron</h2>
+      <p>Klik node mana pun, lalu tekan → : alur lanjut dari situ.</p>
+    </section>
+
+    <section class="croot-node" data-croot-step="8" data-croot-x="-1400" data-croot-y="0">
+      <h2>Target</h2>
+      <p>Tombol bisa mengarahkan kamera ke node lain:</p>
+      <p><button data-croot-target="#zoom">Kembali ke zoom bersarang</button></p>
+    </section>
+
+    <section class="croot-node tile c" data-croot-step="9" data-croot-x="-1400" data-croot-y="-1300">
+      <h2>URL hash</h2>
+      <p>Setiap node punya alamat (<code>#/id</code>). Refresh tetap di slide yang sama.</p>
+    </section>
+
+    <section class="croot-node" data-croot-step="10" data-croot-x="0" data-croot-y="-1300">
+      <h2>Aksesibel</h2>
+      <p>Tanpa JS tampil sebagai dokumen biasa. Menghormati <code>prefers-reduced-motion</code>.</p>
+    </section>
+
+    <section class="croot-node bare" data-croot-step="11" data-croot-x="1400" data-croot-y="-1300" data-croot-z="400">
+      <h2>Tekan <span class="accent">Esc</span></h2>
+      <p>untuk melihat seluruh kanvas.</p>
+    </section>
+
+  </div>
+</div>
+
+<div class="hud">
+  <button onclick="deck.prev()">←</button>
+  <button onclick="deck.overview()">Overview</button>
+  <button onclick="deck.next()">→</button>
+  <span id="pos"></span>
+</div>
+
+<script src="../croot.js"></script>
+<script>
+  var deck = croot('[data-croot]');
+  function showPos() {
+    document.getElementById('pos').textContent = deck.isOverview
+      ? 'overview' : (deck.index + 1) + ' / ' + deck.steps.length;
+  }
+  deck.root.addEventListener('croot:enter', showPos);
+  deck.root.addEventListener('croot:overview', showPos);
+  showPos();
+</script>
+</body>
+</html>

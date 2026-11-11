@@ -1,0 +1,128 @@
+/*!
+ * crootss — CSS 3D spatial presentation engine
+ * https://github.com/crootss/crootss
+ *
+ * Tanpa JS (atau sebelum croot.js jalan) semua node tampil sebagai dokumen
+ * biasa yang bisa dibaca & diindeks. Mode 3D aktif saat root diberi class
+ * `croot-ready` oleh croot.js.
+ */
+
+/* ---------- Konfigurasi (bisa di-override per root) ---------- */
+.croot-viewport {
+  --croot-perspective: 1000px;
+  --croot-speed: 1s;
+  --croot-ease: cubic-bezier(0.65, 0, 0.35, 1);
+  --croot-node-width: 960px;
+  --croot-dim: 0.35;
+}
+
+/* ---------- Fallback dokumen (tanpa JS) ---------- */
+.croot-viewport:not(.croot-ready) .croot-node {
+  max-width: var(--croot-node-width);
+  margin: 2rem auto;
+}
+
+/* ---------- Mode spatial 3D ---------- */
+.croot-viewport.croot-ready {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  perspective: var(--croot-perspective);
+  perspective-origin: 50% 50%;
+  touch-action: none;
+}
+
+/* Stage = "dunia". Kamera digerakkan dengan memberi stage transform invers
+   dari node aktif (dihitung croot.js), jadi tidak ada translateZ mendekati
+   perspective → tidak ada near-clipping. */
+.croot-ready .croot-stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform-origin: 0 0;
+  transition: transform var(--croot-speed) var(--croot-ease);
+}
+
+/* will-change hanya saat kamera bergerak. Setelah diam, browser me-raster
+   ulang teks pada skala akhir → teks tetap tajam saat deep zoom. */
+.croot-ready.croot-moving .croot-stage {
+  will-change: transform;
+}
+
+.croot-ready.croot-instant .croot-stage {
+  transition: none;
+}
+
+.croot-ready .croot-node {
+  --croot-x: 0;
+  --croot-y: 0;
+  --croot-z: 0;
+  --croot-rx: 0;
+  --croot-ry: 0;
+  --croot-rz: 0;
+  --croot-scale: 1;
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  width: var(--croot-node-width);
+  backface-visibility: hidden;
+  transform:
+    translate(-50%, -50%)
+    translate3d(calc(var(--croot-x) * 1px), calc(var(--croot-y) * 1px), calc(var(--croot-z) * 1px))
+    rotateX(calc(var(--croot-rx) * 1deg))
+    rotateY(calc(var(--croot-ry) * 1deg))
+    rotateZ(calc(var(--croot-rz) * 1deg))
+    scale(var(--croot-scale));
+  cursor: pointer;
+}
+
+/* Node bersarang: koordinat anak relatif terhadap pusat induknya.
+   preserve-3d hanya di induk; di node daun ia membuat teks & background
+   saling z-fighting saat node dimiringkan. */
+.croot-ready .croot-node:has(.croot-node) {
+  transform-style: preserve-3d;
+}
+.croot-ready .croot-node .croot-node {
+  left: 50%;
+  top: 50%;
+}
+
+.croot-ready .croot-node.croot-active {
+  cursor: auto;
+}
+
+/* Redupkan node non-aktif. Hanya node daun: opacity < 1 pada induk akan
+   meratakan (flatten) preserve-3d anak-anaknya. */
+.croot-ready .croot-node:not(:has(.croot-node)) {
+  transition: opacity var(--croot-speed) var(--croot-ease);
+}
+.croot-ready:not(.croot-overview) .croot-node:not(.croot-active):not(:has(.croot-node)) {
+  opacity: var(--croot-dim);
+}
+/* Anak dari node aktif adalah bagian kontennya → jangan diredupkan. */
+.croot-ready:not(.croot-overview) .croot-active > .croot-node:not(.croot-active) {
+  opacity: 1;
+}
+
+/* ---------- UI ---------- */
+.croot-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .croot-viewport {
+    --croot-speed: 1ms;
+  }
+}
