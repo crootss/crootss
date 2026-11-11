@@ -39,11 +39,13 @@ Tanpa JS, semua node tampil sebagai dokumen biasa (tetap bisa dibaca & diindeks)
 | `data-croot-target` | Pada elemen apa pun: klik → kamera menuju selector ini. |
 | `data-croot="manual"` | Pada root: matikan auto-init. |
 | `data-croot-fit` | Pada root: porsi layar yang diisi node (default `0.9`). |
+| `data-croot-pullback` | Pada root: kekuatan efek kamera mundur di tengah perpindahan (default `1`, `0` = mati). |
 
-Posisi juga bisa ditulis sebagai custom property: `style="--croot-x: 1400"`.
+Posisi juga bisa ditulis sebagai custom property di CSS, misalnya untuk tata letak berbeda di ponsel: `#kartu { --croot-x: 1400; }`. Nilainya tidak terwariskan ke node anak.
 
 ## Navigasi
 
+- **Kamera 3D**: saat pindah ke node yang jauh, kamera mundur sejenak lalu maju lagi (seperti Prezi), sehingga ruang 3D di sekitarnya terlihat. Atur dengan `data-croot-pullback`.
 - **Linier**: `→ ↓ Spasi PageDown` / `← ↑ Shift+Spasi PageUp`, `Home` / `End`, swipe.
 - **Klik langsung**: klik node mana pun; urutan linier ikut tersinkron.
 - **Overview**: `Esc` → kamera mundur sampai seluruh kanvas muat di layar (dihitung dari bounding box).
@@ -54,7 +56,7 @@ Posisi juga bisa ditulis sebagai custom property: `style="--croot-x: 1400"`.
 ```js
 import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/croot.min.js';
 
-const deck = croot('#deck', { fit: 0.9, hash: true, keyboard: true, touch: true });
+const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
 deck.current; deck.index; deck.isOverview; deck.steps; deck.destroy();
 

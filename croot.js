@@ -45,8 +45,9 @@ export function croot(root, options) {
   if (!root) throw new Error('croot: root element tidak ditemukan');
   if (root.croot) return root.croot;
 
-  options = Object.assign({ fit: 0.9, hash: true, keyboard: true, touch: true }, options);
+  options = Object.assign({ fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true }, options);
   if (root.dataset.crootFit) options.fit = num(root.dataset.crootFit, options.fit);
+  if (root.dataset.crootPullback) options.pullback = num(root.dataset.crootPullback, options.pullback);
 
   var stage = root.querySelector('.croot-stage');
   if (!stage) throw new Error('croot: .croot-stage tidak ditemukan');
@@ -56,6 +57,7 @@ export function croot(root, options) {
   var current = null;    // node aktif
   var index = -1;        // index linier terakhir (tetap saat node bebas diklik)
   var inOverview = false;
+  var pullAnim = null;
   var moveTimer = null;
 
   // Baca atribut data-croot-* (fallback: custom property --croot-*) → simpan
@@ -115,6 +117,29 @@ export function croot(root, options) {
       void stage.offsetWidth; // flush supaya transisi berikutnya normal
       root.classList.remove('croot-instant');
     }
+  }
+
+  // Kamera "mundur" sejenak di tengah perjalanan, seperti Prezi: makin jauh
+  // jarak di layar, makin jauh mundurnya. Dipasang di properti `scale` (bukan
+  // `transform`) supaya tidak mengganggu interpolasi matriks kamera; `scale`
+  // stage berporos di pusat layar, jadi efeknya sama dengan kamera menjauh.
+  function pullback(el) {
+    if (pullAnim) pullAnim.cancel();
+    pullAnim = null;
+    var duration = cssDuration(getComputedStyle(stage).transitionDuration);
+    if (!(options.pullback > 0) || !stage.animate || duration < 50) return;
+    var t = getComputedStyle(stage).transform;
+    var from = !t || t === 'none' ? new DOMMatrix() : new DOMMatrix(t);
+    var p = from.transformPoint(worldMatrix(el).transformPoint(new DOMPoint(0, 0, 0)));
+    var r = Math.hypot(p.x, p.y) / Math.hypot(root.clientWidth, root.clientHeight);
+    var k = Math.max(0.35, 1 / (1 + r * options.pullback));
+    if (k > 0.97) return; // zoom ke anak / node yang sudah di layar: tidak perlu mundur
+    var mid = k + ' ' + k + ' ' + k;
+    pullAnim = stage.animate([
+      { scale: '1 1 1', easing: 'ease-out' },
+      { scale: mid, offset: 0.45, easing: 'ease-in-out' },
+      { scale: '1 1 1' }
+    ], { duration: duration });
   }
 
   function nodeCamera(el) {
@@ -182,6 +207,7 @@ export function croot(root, options) {
     if (pos >= 0) index = pos;
     el.classList.add('croot-active');
     el.setAttribute('aria-current', 'step');
+    if (!instant && prev && !wasOverview) pullback(el);
     setCamera(nodeCamera(el), instant);
     updateHash(el.id);
     announce(el);
@@ -256,6 +282,7 @@ export function croot(root, options) {
 
   var resizeFrame = null;
   function onResize() {
+    if (root.croot !== api) return; // sudah di-destroy
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(function () {
       setCamera(inOverview ? overviewCamera() : nodeCamera(current), true);
@@ -285,6 +312,10 @@ export function croot(root, options) {
     root.addEventListener('touchend', onTouchEnd);
   }
   window.addEventListener('resize', onResize);
+  // Ukuran node/viewport bisa berubah setelah init (font web, gambar, viewport
+  // ponsel yang baru stabil), jadi kamera dipasang ulang setelah semuanya siap.
+  window.addEventListener('load', onResize);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(onResize);
   if (options.hash) window.addEventListener('hashchange', onHash);
 
   var start = options.hash && location.hash.replace(/^#\/?/, '');
@@ -311,8 +342,10 @@ export function croot(root, options) {
       root.removeEventListener('touchstart', onTouchStart);
       root.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('load', onResize);
       window.removeEventListener('hashchange', onHash);
       root.classList.remove('croot-ready', 'croot-overview', 'croot-moving', 'croot-instant');
+      if (pullAnim) pullAnim.cancel();
       stage.style.transform = '';
       all.forEach(function (el) { el.classList.remove('croot-active'); el.removeAttribute('aria-current'); });
       live.remove();

@@ -49,7 +49,7 @@
 /* will-change hanya saat kamera bergerak. Setelah diam, browser me-raster
    ulang teks pada skala akhir → teks tetap tajam saat deep zoom. */
 .croot-ready.croot-moving .croot-stage {
-  will-change: transform;
+  will-change: transform, scale;
 }
 
 /* Mode instan (load awal, resize): matikan semua transisi, termasuk opacity node. */
@@ -58,7 +58,10 @@
   transition: none !important;
 }
 
-.croot-ready .croot-node {
+/* Nilai default di setiap node supaya custom property tidak terwariskan dari
+   node induk (anak bersarang tanpa --croot-ry tidak ikut berputar dua kali).
+   :where() = specificity 0, jadi aturan apa pun dari pengguna tetap menang. */
+:where(.croot-node) {
   --croot-x: 0;
   --croot-y: 0;
   --croot-z: 0;
@@ -66,6 +69,9 @@
   --croot-ry: 0;
   --croot-rz: 0;
   --croot-scale: 1;
+}
+
+.croot-ready .croot-node {
   position: absolute;
   left: 0;
   top: 0;
