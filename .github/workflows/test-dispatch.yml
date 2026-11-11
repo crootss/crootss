@@ -1,0 +1,14 @@
+# Sementara: uji apakah LANDING_DISPATCH_TOKEN terbaca dan punya akses ke landing dan docs.
+name: Test dispatch
+on: workflow_dispatch
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.LANDING_DISPATCH_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] && echo "secret terbaca" || { echo "secret KOSONG"; exit 1; }
+          for repo in crootss/crootss.github.io crootss/docs; do
+            gh api "repos/$repo/dispatches" -f event_type=crootss-release && echo "OK $repo" || echo "GAGAL $repo"
+          done
