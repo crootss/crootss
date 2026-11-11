@@ -5,11 +5,11 @@ Engine presentasi spatial 3D berbasis **CSS 3D transforms** murni: `crootss.css`
 ## Pakai via CDN
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@0/crootss.min.css">
-<script src="https://cdn.jsdelivr.net/gh/crootss/crootss@0/croot.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/crootss.min.css">
+<script type="module" src="https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/croot.min.js"></script>
 ```
 
-Ganti `@0` dengan versi persis (mis. `@v0.1.0`) untuk produksi.
+`croot.js` adalah ES module tanpa dependency dan aktif otomatis. Selalu pin versi (lihat [Releases](https://github.com/crootss/crootss/releases)), jangan `@latest`.
 
 ## Markup
 
@@ -52,6 +52,8 @@ Posisi juga bisa ditulis sebagai custom property: `style="--croot-x: 1400"`.
 ## API
 
 ```js
+import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.2.0/croot.min.js';
+
 const deck = croot('#deck', { fit: 0.9, hash: true, keyboard: true, touch: true });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
 deck.current; deck.index; deck.isOverview; deck.steps; deck.destroy();
@@ -78,6 +80,8 @@ Class status: `.croot-ready`, `.croot-overview`, `.croot-moving` (root); `.croot
 
 ## Pengembangan
 
-- Demo: buka `demo/index.html` di browser.
-- Tes: `node --test 'test/*.test.js'`
+Mengikuti [konvensi CrootJS](https://croot.js.org/docs/conventions): vanilla ES module tanpa build, HTML/CSS/JS di file terpisah (tanpa `<style>`, `<script>` inline, `style=""`, atau `onclick`).
+
+- Demo: jalankan server lokal di root repo (mis. `python3 -m http.server`), buka `/demo/`. ES module tidak bisa dimuat lewat `file://`.
+- Tes: `node --test 'test/*.test.mjs'`
 - Rilis: otomatis. Setiap push ke `main` yang mengubah `croot.js` / `crootss.css` membuat tag + GitHub Release (lihat `.github/workflows/release.yml`). Naik versi mengikuti pesan commit: `feat:` → minor, `feat!:` / `BREAKING CHANGE` → major, lainnya → patch. Bisa dipaksa dengan `#minor` / `#major`.

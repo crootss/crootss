@@ -7,7 +7,7 @@
 # Tag pertama: v0.1.0. Bisa juga dijalankan manual (Actions → Release → Run workflow).
 #
 # Setelah tag terbit, CDN langsung tersedia via jsDelivr:
-#   https://cdn.jsdelivr.net/gh/crootss/crootss@<versi>/croot.min.js
+#   https://cdn.jsdelivr.net/gh/crootss/crootss@<versi>/croot.min.js  (ES module)
 #   https://cdn.jsdelivr.net/gh/crootss/crootss@<versi>/crootss.min.css
 name: Release
 
@@ -47,7 +47,7 @@ jobs:
       - name: Tes
         run: |
           node --check croot.js
-          node --test 'test/*.test.js'
+          node --test 'test/*.test.mjs'
 
       - name: Tentukan versi berikutnya
         id: ver
@@ -110,7 +110,7 @@ jobs:
 
           \`\`\`html
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/crootss.min.css">
-          <script src="https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/croot.min.js"></script>
+          <script type="module" src="https://cdn.jsdelivr.net/gh/${{ github.repository }}@${TAG}/croot.min.js"></script>
           \`\`\`
           EOF
           gh release create "$TAG" dist/* \
