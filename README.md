@@ -86,49 +86,21 @@ Class status: `.croot-ready`, `.croot-overview`, `.croot-moving` (root); `.croot
 
 `croot.js` adalah ES module, dan browser **tidak** mau memuat module dari `file://` (klik dua kali `index.html`). Jalankan server lokal di folder slide, lalu buka `http://localhost:8080/`.
 
-**Windows (PowerShell, tanpa instal apa pun):** buka PowerShell di folder slide, tempel seluruh blok ini, lalu tekan Enter.
+**PowerShell** (bawaan Windows, tanpa instal apa pun): buka PowerShell di folder slide, lalu jalankan:
 
 ```powershell
-function start-server {
-  # Content-Type wajib: browser menolak ES module tanpa MIME type JavaScript.
-  $types = @{
-    '.html'='text/html; charset=utf-8'; '.css'='text/css; charset=utf-8'
-    '.js'='text/javascript; charset=utf-8'; '.mjs'='text/javascript; charset=utf-8'
-    '.json'='application/json'; '.svg'='image/svg+xml'; '.ico'='image/x-icon'
-    '.png'='image/png'; '.jpg'='image/jpeg'; '.jpeg'='image/jpeg'
-    '.gif'='image/gif'; '.webp'='image/webp'; '.woff2'='font/woff2'
-  }
-  $listener = [System.Net.HttpListener]::new()
-  $listener.Prefixes.Add("http://localhost:8080/")
-  $listener.Start()
-  Write-Host "Server jalan di http://localhost:8080/ (tutup jendela untuk berhenti)"
-  while ($listener.IsListening) {
-    $context = $listener.GetContext()
-    $response = $context.Response
-    $path = Join-Path $pwd.Path $context.Request.Url.LocalPath.TrimStart('/')
-    if (!(Test-Path $path) -or (Test-Path $path -PathType Container)) {
-      $path = Join-Path $path "index.html"
-    }
-    if (Test-Path $path -PathType Leaf) {
-      $type = $types[[System.IO.Path]::GetExtension($path).ToLower()]
-      if ($type) { $response.ContentType = $type }
-      $bytes = [System.IO.File]::ReadAllBytes($path)
-      $response.ContentLength64 = $bytes.Length
-      $response.OutputStream.Write($bytes, 0, $bytes.Length)
-    } else {
-      $response.StatusCode = 404
-    }
-    $response.Close()
-  }
-}
-start-server
+irm https://crootss.if.co.id/serve.ps1 | iex
 ```
 
-**macOS / Linux (atau Windows yang sudah ada Python):**
+Browser terbuka otomatis. Tutup jendela untuk berhenti. Isi skripnya bisa dibaca di [serve.ps1](https://crootss.if.co.id/serve.ps1): server kecil yang mengirim header `Content-Type` yang benar (tanpa header itu browser menolak ES module).
+
+**Python** (bawaan macOS dan Linux): buka terminal di folder slide, lalu jalankan:
 
 ```sh
 python3 -m http.server 8080
 ```
+
+Di Windows, ketik `python`. Tekan `Ctrl`+`C` untuk berhenti.
 
 Untuk demo di repo ini, jalankan server di root repo lalu buka `http://localhost:8080/demo/`.
 

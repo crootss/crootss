@@ -1,0 +1,74 @@
+# Perbarui versi crootss/crootss dan crootss/themes yang dipin di README.md
+# ke rilis terbaru, supaya contoh kode yang dibaca pengguna tidak usang.
+#
+# Hanya menyentuh README.md, jadi tidak memicu workflow Release.
+#
+# Pemicu:
+#   - repository_dispatch "crootss-release": dikirim workflow Release di
+#     crootss/crootss atau crootss/themes tepat setelah rilis (secret organisasi
+#     LANDING_DISPATCH_TOKEN).
+#   - jadwal harian: cadangan bila dispatch tidak terkirim.
+#   - manual: Actions → Update versi → Run workflow.
+#
+# Kenaikan versi major tidak diterapkan otomatis; workflow hanya memberi peringatan.
+name: Update versi
+
+on:
+  repository_dispatch:
+    types: [crootss-release]
+  schedule:
+    - cron: '0 1 * * *' # 08:00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+
+concurrency:
+  group: update-crootss
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bandingkan versi & ganti pin
+        id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          changed=""
+          for repo in crootss/crootss crootss/themes; do
+            latest=$(gh release view --repo "$repo" --json tagName -q .tagName)
+            # Bisa ada beberapa versi lama sekaligus (README dan demo); ganti semuanya.
+            pinned=$(grep -rhoE --include='*.md' "$repo@v[0-9]+\.[0-9]+\.[0-9]+" . --exclude-dir=.git | sed 's/.*@//' | sort -uV)
+            echo "$repo: terpasang [$(echo $pinned)], rilis terbaru $latest"
+            if [ -z "$pinned" ]; then echo "  tidak dipin di repo ini, lewati"; continue; fi
+            if [ -z "$latest" ]; then echo "::error::Rilis terbaru $repo tidak terbaca"; exit 1; fi
+            for current in $pinned; do
+              newest=$(printf '%s\n%s\n' "$current" "$latest" | sort -V | tail -n1)
+              [ "$current" = "$latest" ] || [ "$newest" != "$latest" ] && continue
+              if [ "$(echo "$current" | cut -d. -f1)" != "$(echo "$latest" | cut -d. -f1)" ]; then
+                echo "::warning::$repo $latest adalah versi major baru. Perbarui $current secara manual setelah dicek."
+                continue
+              fi
+              targets=$(grep -rlE --include='*.md' "$repo@$current" . --exclude-dir=.git)
+              sed -i "s#$repo@$current#$repo@$latest#g" $targets
+              echo "  $current → $latest: $(echo $targets)"
+              changed="$changed $repo $current → $latest;"
+            done
+          done
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Commit & push
+        if: steps.ver.outputs.changed != ''
+        env:
+          CHANGED: ${{ steps.ver.outputs.changed }}
+        run: |
+          git diff --stat
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "docs: perbarui versi:$CHANGED"
+          git push
