@@ -1,0 +1,13 @@
+# Sementara: uji LANDING_DISPATCH_TOKEN tanpa membuat rilis. Akan dihapus.
+name: Uji dispatch landing
+on: workflow_dispatch
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.LANDING_DISPATCH_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "::error::secret kosong"; exit 1; }
+          gh api repos/crootss/crootss.github.io/dispatches -f event_type=crootss-release -f "client_payload[tag]=test"
+          echo "Dispatch terkirim."
