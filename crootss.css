@@ -129,6 +129,133 @@
   border: 0;
 }
 
+/* Catatan pembicara: hanya tampil di jendela presenter (tombol P). */
+.croot-notes {
+  display: none;
+}
+
+/* ---------- Debug (data-croot-debug): node yang isinya meluap ---------- */
+.croot-debug .croot-overflow {
+  outline: 6px dashed #e5484d;
+  outline-offset: 4px;
+}
+.croot-debug .croot-overflow-el {
+  outline: 3px solid #e5484d;
+  background-color: rgba(229, 72, 77, .15);
+}
+
+/* ---------- Cetak / PDF: satu langkah per halaman 1280×720 ---------- */
+.croot-print {
+  display: none;
+}
+@media print {
+  @page {
+    size: 1280px 720px;
+    margin: 0;
+  }
+  html,
+  body {
+    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body > :not(.croot-print) {
+    display: none !important;
+  }
+  .croot-print {
+    display: block;
+  }
+  .croot-print .croot-viewport.croot-page {
+    position: relative;
+    inset: auto;
+    width: 1280px;
+    height: 720px;
+    overflow: hidden;
+    /* Tanpa contain: strict, Chromium menghitung node di luar halaman sebagai
+       luapan dan mengecilkan seluruh dokumen saat dicetak. */
+    contain: strict;
+    break-after: page;
+  }
+  .croot-print .croot-page {
+    perspective: none;
+  }
+  /* Mesin cetak Chrome salah menskala apa pun yang 3D (translate3d, rotateX,
+     backface-visibility), jadi saat dicetak setiap node memakai transform 2D
+     yang setara: proyeksi tegak lurus ke bidang z = 0. */
+  .croot-print .croot-stage,
+  .croot-print .croot-node {
+    transform-style: flat !important;
+    backface-visibility: visible !important;
+  }
+  .croot-print .croot-node {
+    /* Urutan tumpuk mengikuti z (peta di belakang blok, anak di depan induk) */
+    z-index: calc(var(--croot-z) * 1);
+    transform:
+      translate(-50%, -50%)
+      translate(calc(var(--croot-x) * 1px), calc(var(--croot-y) * 1px))
+      rotate(calc(var(--croot-rz) * 1deg))
+      scale(var(--croot-scale)) !important;
+  }
+  .croot-print *,
+  .croot-print *::before,
+  .croot-print *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- Jendela presenter ---------- */
+.croot-presenter {
+  margin: 0;
+  padding: 24px 32px;
+  font: 18px/1.5 system-ui, sans-serif;
+  background: #16161a;
+  color: #f2f2f5;
+}
+.croot-presenter .cp-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+.croot-presenter .cp-timer {
+  font-size: 40px;
+  font-weight: 700;
+}
+.croot-presenter .cp-pos,
+.croot-presenter .cp-clock {
+  opacity: .7;
+}
+.croot-presenter .cp-now {
+  margin: 24px 0 12px;
+  font-size: 30px;
+}
+.croot-presenter .cp-notes {
+  font-size: 24px;
+}
+.croot-presenter .cp-note {
+  display: block;
+}
+.croot-presenter .cp-empty,
+.croot-presenter .cp-next {
+  opacity: .6;
+}
+.croot-presenter .cp-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+.croot-presenter .cp-btn {
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, .3);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .croot-viewport {
     --croot-speed: 1ms;

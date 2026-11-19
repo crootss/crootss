@@ -43,6 +43,8 @@ Tanpa JS, semua node tampil sebagai dokumen biasa (tetap bisa dibaca & diindeks)
 | `data-croot-fit` | Pada root: porsi layar yang diisi node (default `0.9`). |
 | `data-croot-pullback` | Pada root: kekuatan efek kamera mundur di tengah perpindahan (default `1`, `0` = mati). |
 | `data-croot-overview` | Pada root: selector node big picture. Overview membingkai node ini, dan → setelah langkah terakhir kembali ke sana. |
+| `data-croot-debug` | Pada root: tandai node yang isinya meluap (garis putus merah, elemen penyebabnya ikut ditandai) dan tulis daftarnya di console. Hapus sebelum tampil. |
+| `class="croot-notes"` | Pada `<aside>` di dalam node: catatan pembicara. Tidak tampil di slide, hanya di jendela presenter. |
 
 Posisi juga bisa ditulis sebagai custom property di CSS, misalnya untuk tata letak berbeda di ponsel: `#kartu { --croot-x: 1400; }`. Nilainya tidak terwariskan ke node anak.
 
@@ -92,14 +94,28 @@ Alat ini menulis SVG garis dan label ke HTML, serta posisi `--croot-x/y/scale` u
 - **Klik langsung**: klik node mana pun; urutan linier ikut tersinkron.
 - **Overview**: `Esc` → kamera membingkai node big picture (`data-croot-overview`), atau tanpa itu mundur sampai seluruh kanvas muat di layar.
 - **URL**: setiap node punya alamat `#/<id>`, overview di `#/overview`.
+- **Presenter**: `P` membuka jendela kedua berisi catatan pembicara (`<aside class="croot-notes">`), langkah berikutnya, pengatur waktu, dan jam. Tampilkan jendela utama di proyektor (layar penuh dengan `F11`), lalu kendalikan dari jendela presenter atau jendela utama, keduanya tersinkron.
+- **Cetak / PDF**: `Ctrl+P` (atau `?print` di URL) mencetak satu langkah per halaman 1280×720, sama dengan yang tampil di layar. Pilih "Simpan sebagai PDF" untuk mengirim ke promotor, panitia, atau arsip. Node yang diputar (`rx`/`ry`) dicetak datar.
+
+### Catatan pembicara
+
+```html
+<section class="croot-node slide" data-croot-step="3">
+  <h2>Hasil penelitian</h2>
+  <aside class="croot-notes"><p>Sebut jumlah responden dulu.</p></aside>
+</section>
+```
 
 ## API
 
 ```js
 import { croot } from 'https://cdn.jsdelivr.net/gh/crootss/crootss@v0.4.0/croot.min.js';
 
-const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: '#peta' });
+const deck = croot('#deck', { fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: '#peta', debug: false, presenter: true });
 deck.next(); deck.prev(); deck.goto(3); deck.goto('id-node'); deck.overview();
+deck.presenter();      // buka jendela presenter (null bila popup diblokir)
+deck.print();          // dialog cetak, satu langkah per halaman
+deck.checkOverflow();  // [{ node, elements }] node yang isinya meluap
 deck.current; deck.index; deck.isOverview; deck.steps; deck.bigPicture; deck.destroy();
 
 deck.root.addEventListener('croot:enter', (e) => console.log(e.target, e.detail.index));
@@ -121,6 +137,29 @@ deck.root.addEventListener('croot:enter', (e) => console.log(e.target, e.detail.
 ```
 
 Class status: `.croot-ready`, `.croot-overview`, `.croot-moving` (root); `.croot-active` + `aria-current="step"` (node). `prefers-reduced-motion` dihormati otomatis.
+
+## Versi yang cocok
+
+Library dan [tema](https://github.com/crootss/themes) diberi versi terpisah. Pasangan berikut sudah dipakai bersama di landing dan docs; gunakan pasangan terbaru.
+
+| crootss | themes | Catatan |
+| :-- | :-- | :-- |
+| v0.5.0 | v0.6.0 | Presenter, cetak/PDF, debug isi meluap; tema: kartu potret, kartu saudara diredupkan di ponsel |
+| v0.4.0 | v0.5.0, v0.4.0 | Big picture (`data-croot-overview`); tema: diagram, animasi, `matrix`, `figure`, `flow vertical`, `byline` |
+| v0.3.0 | v0.3.0, v0.2.1, v0.2.0 | Kamera mundur (pullback) |
+
+Daftar fitur dan perbaikan setiap rilis ada di [Releases](https://github.com/crootss/crootss/releases).
+
+## Pakai tanpa internet
+
+Ruang sidang dan konferensi sering tanpa internet, padahal library, tema, dan font dimuat dari CDN. Saat masih online, buat paket luring:
+
+```sh
+curl -O https://raw.githubusercontent.com/crootss/crootss/main/tools/luring.py
+python3 luring.py folder-slide          # hasil: folder-slide-luring/
+```
+
+Alat ini menyalin deck, mengunduh crootss, tema, font Google, dan impor JS dari CDN ke `vendor/`, lalu mengganti alamatnya ke salinan lokal. `serve.ps1` dan petunjuk `BACA-LURING.txt` ikut disalin. Bawa folder `-luring` itu, lalu jalankan servernya (lihat bagian berikut) tanpa internet. Alat ini memperingatkan rujukan ke file di luar folder deck, karena file itu tidak ikut terbawa.
 
 ## Menjalankan slide di komputer sendiri
 

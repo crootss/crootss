@@ -105,7 +105,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.ver.outputs.tag }}
         run: |
-          cat > notes.md <<EOF
+          # Daftar fitur dan perbaikan dari pesan commit, lalu potongan CDN.
+          last=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)
+          bash .github/catatan-rilis.sh "$last" > notes.md
+          cat >> notes.md <<EOF
           ## CDN
 
           \`\`\`html

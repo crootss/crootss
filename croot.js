@@ -45,10 +45,11 @@ export function croot(root, options) {
   if (!root) throw new Error('croot: root element tidak ditemukan');
   if (root.croot) return root.croot;
 
-  options = Object.assign({ fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: null }, options);
+  options = Object.assign({ fit: 0.9, pullback: 1, hash: true, keyboard: true, touch: true, overview: null, debug: false, presenter: true }, options);
   if (root.dataset.crootFit) options.fit = num(root.dataset.crootFit, options.fit);
   if (root.dataset.crootPullback) options.pullback = num(root.dataset.crootPullback, options.pullback);
   if (root.dataset.crootOverview) options.overview = root.dataset.crootOverview;
+  if (root.hasAttribute('data-croot-debug')) options.debug = true;
 
   var stage = root.querySelector('.croot-stage');
   if (!stage) throw new Error('croot: .croot-stage tidak ditemukan');
@@ -147,8 +148,10 @@ export function croot(root, options) {
     ], { duration: duration });
   }
 
-  function nodeCamera(el) {
-    var fit = Math.min(root.clientWidth / el.offsetWidth, root.clientHeight / el.offsetHeight) * options.fit;
+  // w, h: ukuran layar kamera; default viewport (halaman cetak memakai ukurannya sendiri).
+  function nodeCamera(el, w, h) {
+    w = w || root.clientWidth; h = h || root.clientHeight;
+    var fit = Math.min(w / el.offsetWidth, h / el.offsetHeight) * options.fit;
     return new DOMMatrix().scaleSelf(fit, fit, fit).multiply(worldMatrix(el).inverse());
   }
 
@@ -167,6 +170,190 @@ export function croot(root, options) {
     return new DOMMatrix()
       .scaleSelf(fit, fit, fit)
       .translateSelf(-(minX + maxX) / 2, -(minY + maxY) / 2, 0);
+  }
+
+  /* ---------- debug: isi meluap ---------- */
+
+  // Tandai node yang isinya melewati batas node. Diukur dari offsetLeft/Top
+  // (tata letak tanpa transform), jadi tidak terpengaruh kamera atau animasi
+  // masuk. Dekorasi ::before/::after tidak ikut diukur.
+  function checkOverflow() {
+    var found = [];
+    root.querySelectorAll('.croot-overflow-el').forEach(function (el) { el.classList.remove('croot-overflow-el'); });
+    all.forEach(function (node) {
+      var W = node.clientWidth, H = node.clientHeight, bad = [];
+      node.querySelectorAll('*').forEach(function (el) {
+        if (!(el instanceof HTMLElement) || el.closest(NODE) !== node) return; // anak node diukur sendiri
+        var x = 0, y = 0, p = el;
+        while (p && p !== node) { x += p.offsetLeft; y += p.offsetTop; p = p.offsetParent; }
+        if (p !== node) return; // tersembunyi atau position: fixed
+        var cs = getComputedStyle(el);
+        var w = Math.max(el.offsetWidth, cs.overflowX === 'visible' ? el.scrollWidth : 0);
+        var h = Math.max(el.offsetHeight, cs.overflowY === 'visible' ? el.scrollHeight : 0);
+        if (x < -1 || y < -1 || x + w > W + 1 || y + h > H + 1) bad.push(el);
+      });
+      // Hanya elemen terluar yang ditandai; anaknya ikut meluap bersamanya.
+      bad = bad.filter(function (el) { return !bad.some(function (o) { return o !== el && o.contains(el); }); });
+      node.classList.toggle('croot-overflow', bad.length > 0);
+      if (bad.length) {
+        bad.forEach(function (el) { el.classList.add('croot-overflow-el'); });
+        found.push({ node: node, elements: bad });
+      }
+    });
+    if (found.length && options.debug) {
+      console.warn('croot: isi meluap di ' + found.length + ' node: ' + found.map(function (f) { return '#' + f.node.id; }).join(', '), found);
+    }
+    return found;
+  }
+
+  /* ---------- cetak / PDF: satu langkah per halaman ---------- */
+
+  // Saat dicetak, setiap langkah disalin menjadi satu halaman 1280×720 dengan
+  // kamera di langkah itu, jadi PDF sama dengan yang tampil di layar.
+  var PAGE_W = 1280, PAGE_H = 720;
+  var printBox = null;
+  function buildPrint() {
+    if (printBox) return;
+    printBox = document.createElement('div');
+    printBox.className = 'croot-print';
+    var pages = steps.slice();
+    if (big && pages.indexOf(big) < 0) pages.unshift(big);
+    pages.forEach(function (el) {
+      var page = root.cloneNode(false);
+      ['id', 'data-croot', 'tabindex', 'aria-label'].forEach(function (a) { page.removeAttribute(a); });
+      page.classList.remove('croot-moving', 'croot-instant', 'croot-overview');
+      page.classList.add('croot-page');
+      if (el === big) page.classList.add('croot-overview');
+      var st = stage.cloneNode(true);
+      // Kamera cetak 2D: skala lewat `zoom` (ukuran tata letak ikut mengecil),
+      // sisanya lewat transform. Mesin cetak Chromium salah me-raster elemen
+      // raksasa yang hanya dikecilkan dengan transform (mis. peta 11000px).
+      var m = nodeCamera(el, PAGE_W, PAGE_H), k = Math.hypot(m.a, m.b);
+      st.style.zoom = k;
+      st.style.transform = 'matrix(' + [m.a / k, m.b / k, m.c / k, m.d / k, m.e / k, m.f / k].join(',') + ')';
+      st.querySelectorAll('.croot-active').forEach(function (n) { n.classList.remove('croot-active'); n.removeAttribute('aria-current'); });
+      var twin = st.querySelector('#' + CSS.escape(el.id));
+      if (twin) twin.classList.add('croot-active');
+      page.appendChild(st);
+      printBox.appendChild(page);
+    });
+    document.body.appendChild(printBox);
+  }
+  function clearPrint() {
+    if (printBox) printBox.remove();
+    printBox = null;
+  }
+  function print() {
+    buildPrint();
+    window.print();
+  }
+
+  /* ---------- presenter: catatan, waktu, langkah berikutnya ---------- */
+
+  // Jendela kedua untuk penyaji (tombol P). Jendela utama tetap untuk
+  // proyektor/penonton; keduanya dikendalikan dari mana saja.
+  var presenterWin = null;
+  function titleOf(el) {
+    if (!el) return '';
+    var heading = el.querySelector('h1, h2, h3, h4, h5, h6');
+    return (el.getAttribute('aria-label') || (heading ? heading.textContent : el.id)).trim().replace(/\s+/g, ' ');
+  }
+  function notesOf(el) {
+    return el ? Array.prototype.filter.call(el.querySelectorAll('.croot-notes'), function (n) { return n.closest(NODE) === el; }) : [];
+  }
+  function presenter() {
+    if (presenterWin && !presenterWin.closed) { presenterWin.focus(); return presenterWin; }
+    var win = window.open('', 'croot-presenter', 'width=960,height=640');
+    if (!win) return null; // popup diblokir browser
+    presenterWin = win;
+    var d = win.document;
+    d.title = 'Presenter: ' + document.title;
+    d.documentElement.lang = document.documentElement.lang || 'id';
+    // Gaya presenter ada di crootss.css; pakai stylesheet yang sama.
+    Array.prototype.forEach.call(document.styleSheets, function (sheet) {
+      if (sheet.href && /crootss(\.min)?\.css(\?|$)/.test(sheet.href)) {
+        var link = d.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = sheet.href;
+        d.head.appendChild(link);
+      }
+    });
+    d.body.className = 'croot-presenter';
+    d.body.innerHTML = '';
+    function part(tag, cls, parent) {
+      var e = d.createElement(tag);
+      e.className = cls;
+      (parent || d.body).appendChild(e);
+      return e;
+    }
+    var bar = part('header', 'cp-bar');
+    var pos = part('span', 'cp-pos', bar);
+    var timer = part('span', 'cp-timer', bar);
+    var clock = part('span', 'cp-clock', bar);
+    var reset = part('button', 'cp-btn', bar);
+    reset.type = 'button';
+    reset.textContent = 'Ulang waktu';
+    var now = part('h1', 'cp-now');
+    var notes = part('div', 'cp-notes');
+    var nextEl = part('p', 'cp-next');
+    var nav = part('nav', 'cp-nav');
+    [['prev', '← Sebelumnya'], ['overview', 'Big picture'], ['next', 'Berikutnya →']].forEach(function (b) {
+      var btn = part('button', 'cp-btn', nav);
+      btn.type = 'button';
+      btn.dataset.act = b[0];
+      btn.textContent = b[1];
+    });
+
+    var start = Date.now();
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+      var s = Math.floor((Date.now() - start) / 1000);
+      timer.textContent = pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+      var t = new Date();
+      clock.textContent = pad(t.getHours()) + ':' + pad(t.getMinutes());
+    }
+    function render() {
+      if (win.closed) return;
+      pos.textContent = inOverview ? 'Big picture' : (index + 1) + ' / ' + steps.length;
+      now.textContent = inOverview ? 'Big picture' : titleOf(current);
+      notes.innerHTML = '';
+      var list = inOverview ? [] : notesOf(current);
+      if (!list.length) part('p', 'cp-empty', notes).textContent = 'Tidak ada catatan untuk langkah ini.';
+      list.forEach(function (n) {
+        var copy = d.importNode(n, true);
+        copy.className = 'cp-note';
+        notes.appendChild(copy);
+      });
+      var nx = inOverview ? current : steps[index + 1];
+      nextEl.textContent = nx ? 'Berikutnya: ' + titleOf(nx) : (big ? 'Berikutnya: big picture' : 'Langkah terakhir');
+    }
+    reset.addEventListener('click', function () { start = Date.now(); tick(); });
+    nav.addEventListener('click', function (e) {
+      var act = e.target.closest('[data-act]');
+      if (!act) return;
+      if (act.dataset.act === 'overview') overview(true);
+      else api[act.dataset.act]();
+    });
+    win.addEventListener('keydown', function (e) {
+      if (e.altKey || e.ctrlKey || e.metaKey) return;
+      var k = e.key;
+      if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') next();
+      else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp') prev();
+      else if (k === 'Escape') overview();
+      else return;
+      e.preventDefault();
+    });
+    root.addEventListener('croot:enter', render);
+    root.addEventListener('croot:overview', render);
+    win.addEventListener('pagehide', function () {
+      root.removeEventListener('croot:enter', render);
+      root.removeEventListener('croot:overview', render);
+      presenterWin = null;
+    });
+    win.setInterval(tick, 1000);
+    tick();
+    render();
+    return win;
   }
 
   function emit(target, name, detail) {
@@ -256,6 +443,7 @@ export function croot(root, options) {
     else if (k === 'Home') goto(0);
     else if (k === 'End') goto(steps.length - 1);
     else if (k === 'Escape') overview();
+    else if ((k === 'p' || k === 'P') && options.presenter) presenter();
     else return;
     e.preventDefault();
   }
@@ -294,6 +482,7 @@ export function croot(root, options) {
     cancelAnimationFrame(resizeFrame);
     resizeFrame = requestAnimationFrame(function () {
       setCamera(inOverview ? overviewCamera() : nodeCamera(current), true);
+      if (options.debug) checkOverflow();
     });
   }
 
@@ -325,6 +514,9 @@ export function croot(root, options) {
   window.addEventListener('load', onResize);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(onResize);
   if (options.hash) window.addEventListener('hashchange', onHash);
+  window.addEventListener('beforeprint', buildPrint);
+  window.addEventListener('afterprint', clearPrint);
+  if (options.debug) root.classList.add('croot-debug');
 
   var start = options.hash && location.hash.replace(/^#\/?/, '');
   if (start === 'overview') {
@@ -342,6 +534,9 @@ export function croot(root, options) {
     next: next,
     prev: prev,
     overview: overview,
+    checkOverflow: checkOverflow,
+    print: print,
+    presenter: presenter,
     get current() { return current; },
     get index() { return index; },
     get isOverview() { return inOverview; },
@@ -353,7 +548,12 @@ export function croot(root, options) {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('load', onResize);
       window.removeEventListener('hashchange', onHash);
-      root.classList.remove('croot-ready', 'croot-overview', 'croot-moving', 'croot-instant');
+      window.removeEventListener('beforeprint', buildPrint);
+      window.removeEventListener('afterprint', clearPrint);
+      clearPrint();
+      if (presenterWin && !presenterWin.closed) presenterWin.close();
+      root.classList.remove('croot-ready', 'croot-overview', 'croot-moving', 'croot-instant', 'croot-debug');
+      all.forEach(function (el) { el.classList.remove('croot-overflow'); });
       if (pullAnim) pullAnim.cancel();
       stage.style.transform = '';
       all.forEach(function (el) { el.classList.remove('croot-active'); el.removeAttribute('aria-current'); });
@@ -362,6 +562,13 @@ export function croot(root, options) {
     }
   };
   root.croot = api;
+
+  // ?print di URL: langsung buka dialog cetak setelah font dan gambar siap.
+  if (/[?&]print(=|&|$)/.test(location.search)) {
+    var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    var loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(function (r) { window.addEventListener('load', r, { once: true }); });
+    Promise.all([ready, loaded]).then(function () { setTimeout(print, 300); });
+  }
   return api;
 }
 
