@@ -1,0 +1,37 @@
+/* Gaya khusus contoh ini. Posisi blok dan garis peta di bawah dibuat oleh
+   ../peta.py dari peta.json; ubah peta.json lalu jalankan ulang. */
+/* peta:mulai (dibuat oleh crootss/tools/peta.py dari peta.json; jangan diedit manual) */
+/* Node big picture mencakup seluruh peta dan berada sedikit di belakang blok. */
+#peta { --croot-y: -1064; --croot-z: -40; }
+.croot-ready #peta { width: 12824px; height: 9448px; }
+.peta-garis { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; --dg-gap: 42px; }
+.peta-garis .dg-edge { stroke-width: 14; }
+.peta-desktop .dg-label text { font-size: 84px; }
+.peta-ponsel .dg-label text { font-size: 56px; }
+.peta-ponsel, .croot-viewport:not(.croot-ready) .peta-garis { display: none; }
+/* Saat peta utuh tampil, semua blok terlihat jelas (tidak diredupkan) */
+.croot-ready:has(#peta.croot-active) .croot-node { opacity: 1; }
+#judul      { --croot-x: 0; --croot-y: 0; --croot-scale: 1.4; }
+#latar      { --croot-x: 0; --croot-y: -2800; }
+#masalah    { --croot-x: 0; --croot-y: -5000; --croot-scale: 0.8; }
+#metode     { --croot-x: 3000; --croot-y: 0; }
+#data       { --croot-x: 5400; --croot-y: 0; --croot-scale: 0.8; }
+#hasil      { --croot-x: 0; --croot-y: 2800; }
+#kesimpulan { --croot-x: -3000; --croot-y: 0; }
+
+@media (max-width: 640px) {
+  #peta { --croot-y: -1236; }
+  .croot-ready #peta { width: 7376px; height: 11152px; }
+  .peta-garis { --dg-gap: 42px; }
+  .peta-garis .dg-edge { stroke-width: 14; }
+  .croot-ready .peta-ponsel { display: block; }
+  .peta-desktop { display: none; }
+  #judul      { --croot-x: 0; --croot-y: 0; --croot-scale: 1.4; }
+  #latar      { --croot-x: 0; --croot-y: -3300; }
+  #masalah    { --croot-x: 0; --croot-y: -5900; --croot-scale: 0.8; }
+  #metode     { --croot-x: 1700; --croot-y: 0; }
+  #data       { --croot-x: 3000; --croot-y: 0; --croot-scale: 0.8; }
+  #hasil      { --croot-x: 0; --croot-y: 3300; }
+  #kesimpulan { --croot-x: -1700; --croot-y: 0; }
+}
+/* peta:akhir */

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contoh concept map crootss</title>
+  <!-- Library dari repo ini (selalu versi terkini); tema dari CDN -->
+  <link rel="stylesheet" href="../../crootss.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/crootss/themes@v0.5.0/minimal.min.css">
+  <link rel="stylesheet" href="contoh.css">
+</head>
+<body>
+<main class="croot-viewport" data-croot data-croot-overview="#peta">
+  <div class="croot-stage">
+
+    <section class="croot-node slide t-1 cover" id="judul" data-croot-step="1" aria-label="Judul">
+      <p class="tag">Contoh peta</p>
+      <h1>Skripsi</h1>
+      <p class="lead">Satu peta, empat bagian.</p>
+      <p class="byline"><b>Nama Penulis</b>Program Studi, Universitas</p>
+      <p class="hint"><kbd>→</kbd> lanjut · <kbd>Esc</kbd> peta utuh</p>
+    </section>
+
+    <!-- Big picture: garis dan label di antara penanda dibuat oleh ../peta.py dari peta.json -->
+    <div class="croot-node" id="peta" data-croot-step="2" aria-label="Peta skripsi">
+      <!-- peta:garis -->
+      <svg class="dg peta-garis peta-desktop" viewBox="-6412 -5788 12824 9448" aria-hidden="true" focusable="false">
+        <g>
+          <path class="dg-edge dotted a-flow" d="M0 0 L0 -2800"/>
+          <path class="dg-edge dotted a-flow" d="M0 -2800 L0 -5000"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L3000 0"/>
+          <path class="dg-edge dotted a-flow" d="M3000 0 L5400 0"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L0 2800"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L-3000 0"/>
+        </g>
+        <g>
+          <g class="dg-label" transform="translate(0 -1472)"><rect x="-380" y="-72" width="759" height="143" rx="71"/><text>berangkat dari</text></g>
+          <g class="dg-label" transform="translate(0 -3936)"><rect x="-403" y="-72" width="806" height="143" rx="71"/><text>dirumuskan jadi</text></g>
+          <g class="dg-label" transform="translate(1628 0)"><rect x="-380" y="-72" width="759" height="143" rx="71"/><text>dijawab dengan</text></g>
+          <g class="dg-label" transform="translate(4264 0)"><rect x="-215" y="-72" width="430" height="143" rx="71"/><text>memakai</text></g>
+          <g class="dg-label" transform="translate(0 1472)"><rect x="-333" y="-72" width="665" height="143" rx="71"/><text>menghasilkan</text></g>
+          <g class="dg-label" transform="translate(-1628 0)"><rect x="-380" y="-72" width="759" height="143" rx="71"/><text>ditutup dengan</text></g>
+        </g>
+      </svg>
+      <svg class="dg peta-garis peta-ponsel" viewBox="-3688 -6812 7376 11152" aria-hidden="true" focusable="false">
+        <g>
+          <path class="dg-edge dotted a-flow" d="M0 0 L0 -3300"/>
+          <path class="dg-edge dotted a-flow" d="M0 -3300 L0 -5900"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L1700 0"/>
+          <path class="dg-edge dotted a-flow" d="M1700 0 L3000 0"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L0 3300"/>
+          <path class="dg-edge dotted a-flow" d="M0 0 L-1700 0"/>
+        </g>
+        <g>
+          <g class="dg-label" transform="translate(0 -1778)"><rect x="-253" y="-48" width="506" height="95" rx="47"/><text>berangkat dari</text></g>
+          <g class="dg-label" transform="translate(0 -4664)"><rect x="-269" y="-48" width="538" height="95" rx="47"/><text>dirumuskan jadi</text></g>
+          <g class="dg-label" transform="translate(922 0)"><rect x="-253" y="-48" width="506" height="95" rx="47"/><text>dijawab dengan</text></g>
+          <g class="dg-label" transform="translate(2386 0)"><rect x="-144" y="-48" width="287" height="95" rx="47"/><text>memakai</text></g>
+          <g class="dg-label" transform="translate(0 1778)"><rect x="-222" y="-48" width="444" height="95" rx="47"/><text>menghasilkan</text></g>
+          <g class="dg-label" transform="translate(-922 0)"><rect x="-253" y="-48" width="506" height="95" rx="47"/><text>ditutup dengan</text></g>
+        </g>
+      </svg>
+      <!-- /peta:garis -->
+    </div>
+
+    <section class="croot-node slide t-2" id="latar" data-croot-step="3">
+      <p class="eyebrow"><b>01</b> Latar belakang</p>
+      <h2>Kenapa topik ini penting.</h2>
+      <p class="sub">Konteks dan celah penelitian.</p>
+    </section>
+    <section class="croot-node slide t-2" id="masalah" data-croot-step="4">
+      <p class="eyebrow"><b>1.1</b> Rumusan masalah</p>
+      <h2>Pertanyaan yang dijawab.</h2>
+    </section>
+
+    <section class="croot-node slide t-4" id="metode" data-croot-step="5">
+      <p class="eyebrow"><b>02</b> Metode</p>
+      <h2>Cara menjawabnya.</h2>
+      <ol class="flow">
+        <li><b>Kumpulkan</b>Data lapangan.</li>
+        <li><b>Olah</b>Analisis.</li>
+        <li><b>Uji</b>Validasi.</li>
+      </ol>
+    </section>
+    <section class="croot-node slide t-4" id="data" data-croot-step="6">
+      <p class="eyebrow"><b>2.1</b> Data</p>
+      <h2>Sumber dan jumlah data.</h2>
+    </section>
+
+    <section class="croot-node slide t-5" id="hasil" data-croot-step="7">
+      <p class="eyebrow"><b>03</b> Hasil</p>
+      <h2>Apa yang ditemukan.</h2>
+    </section>
+
+    <section class="croot-node slide t-3" id="kesimpulan" data-croot-step="8">
+      <p class="eyebrow"><b>04</b> Kesimpulan</p>
+      <h2>Jawaban dan saran.</h2>
+    </section>
+
+  </div>
+</main>
+<script type="module" src="../../croot.js"></script>
+</body>
+</html>

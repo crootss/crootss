@@ -1,7 +1,8 @@
 # Perbarui versi crootss/crootss dan crootss/themes yang dipin di README.md
+# dan contoh HTML (tools/contoh/)
 # ke rilis terbaru, supaya contoh kode yang dibaca pengguna tidak usang.
 #
-# Hanya menyentuh README.md, jadi tidak memicu workflow Release.
+# Hanya menyentuh *.md dan *.html, jadi tidak memicu workflow Release.
 #
 # Pemicu:
 #   - repository_dispatch "crootss-release": dikirim workflow Release di
@@ -43,7 +44,7 @@ jobs:
           for repo in crootss/crootss crootss/themes; do
             latest=$(gh release view --repo "$repo" --json tagName -q .tagName)
             # Bisa ada beberapa versi lama sekaligus (README dan demo); ganti semuanya.
-            pinned=$(grep -rhoE --include='*.md' "$repo@v[0-9]+\.[0-9]+\.[0-9]+" . --exclude-dir=.git | sed 's/.*@//' | sort -uV)
+            pinned=$(grep -rhoE --include='*.md' --include='*.html' "$repo@v[0-9]+\.[0-9]+\.[0-9]+" . --exclude-dir=.git | sed 's/.*@//' | sort -uV)
             echo "$repo: terpasang [$(echo $pinned)], rilis terbaru $latest"
             if [ -z "$pinned" ]; then echo "  tidak dipin di repo ini, lewati"; continue; fi
             if [ -z "$latest" ]; then echo "::error::Rilis terbaru $repo tidak terbaca"; exit 1; fi
@@ -54,7 +55,7 @@ jobs:
                 echo "::warning::$repo $latest adalah versi major baru. Perbarui $current secara manual setelah dicek."
                 continue
               fi
-              targets=$(grep -rlE --include='*.md' "$repo@$current" . --exclude-dir=.git)
+              targets=$(grep -rlE --include='*.md' --include='*.html' "$repo@$current" . --exclude-dir=.git)
               sed -i "s#$repo@$current#$repo@$latest#g" $targets
               echo "  $current → $latest: $(echo $targets)"
               changed="$changed $repo $current → $latest;"

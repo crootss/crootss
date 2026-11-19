@@ -1,0 +1,12 @@
+{
+  "html": "index.html",
+  "css": "contoh.css",
+  "peta": "peta",
+  "pusat": "judul",
+  "cabang": [
+    {"id": "latar", "label": "berangkat dari", "detail": [{"id": "masalah", "label": "dirumuskan jadi"}]},
+    {"id": "metode", "label": "dijawab dengan", "detail": [{"id": "data", "label": "memakai"}]},
+    {"id": "hasil", "label": "menghasilkan"},
+    {"id": "kesimpulan", "label": "ditutup dengan"}
+  ]
+}

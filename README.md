@@ -58,6 +58,33 @@ Presentasi crootss dimulai dari gambaran besar lalu zoom ke detail:
 
 Kelas diagram (`dg-*`, `bmc`, `flow`, `timeline`) dan animasi (`a-*`) ada di [crootss/themes](https://github.com/crootss/themes). Panduan lengkap: https://crootss.if.co.id/docs/big-picture/
 
+### Alat peta (`tools/peta.py`)
+
+Untuk concept map (pusat, cabang, detail), posisi blok dan garis penghubung tidak perlu ditulis manual. Tulis strukturnya sekali di `peta.json`:
+
+```json
+{
+  "html": "index.html",
+  "css": "slide.css",
+  "peta": "peta",
+  "pusat": "judul",
+  "cabang": [
+    {"id": "latar", "label": "berangkat dari", "detail": [{"id": "masalah", "label": "dirumuskan jadi"}]},
+    {"id": "metode", "label": "dijawab dengan"},
+    {"id": "hasil", "label": "menghasilkan"}
+  ]
+}
+```
+
+Di dalam node big picture, pasang penanda `<!-- peta:garis --><!-- /peta:garis -->`, lalu jalankan (Python 3, tanpa instal apa pun):
+
+```sh
+curl -O https://raw.githubusercontent.com/crootss/crootss/main/tools/peta.py
+python3 peta.py peta.json
+```
+
+Alat ini menulis SVG garis dan label ke HTML, serta posisi `--croot-x/y/scale` untuk desktop dan ponsel ke CSS. Ukuran node big picture dihitung otomatis. Alat juga melaporkan blok yang bertumpukan (`TUMPANG`) dan label yang tidak muat di celahnya (`SEMPIT`). Hasilnya HTML/CSS biasa yang di-commit, bukan langkah build. Contoh lengkap ada di [`tools/contoh/`](tools/contoh/); opsi lainnya (sudut, jari-jari, ukuran blok) dijelaskan di kepala `tools/peta.py`.
+
 ## Navigasi
 
 - **Kamera 3D**: saat pindah ke node yang jauh, kamera mundur sejenak lalu maju lagi (seperti Prezi), sehingga ruang 3D di sekitarnya terlihat. Atur dengan `data-croot-pullback`.
