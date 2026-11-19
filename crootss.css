@@ -134,6 +134,19 @@
   display: none;
 }
 
+/* Gambar/diagram yang bisa diketuk untuk layar penuh (data-croot-zoom) */
+.croot-ready .croot-active [data-croot-zoom] {
+  cursor: zoom-in;
+}
+[data-croot-zoom]:fullscreen {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* Latar = warna permukaan slide/kartu (token tema), supaya teks diagram
+     yang memakai currentColor tetap terbaca. */
+  background: var(--croot-zoom-bg, var(--surface, #fff));
+}
+
 /* ---------- Debug (data-croot-debug): node yang isinya meluap ---------- */
 .croot-debug .croot-overflow {
   outline: 6px dashed #e5484d;

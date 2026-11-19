@@ -15,6 +15,13 @@ HTML/CSS biasa yang di-commit, bukan langkah build. Hanya pustaka standar
 Python 3.
 
     python3 peta.py peta.json
+    python3 peta.py --cek peta.json    # CI: gagal bila HTML/CSS belum sesuai, tanpa menulis
+
+Tanpa menyalin berkasnya:
+
+    curl -s https://raw.githubusercontent.com/crootss/crootss/main/tools/peta.py | python3 - peta.json
+
+Sebagai modul: import peta; berkas, laporan, info = peta.buat('peta.json').
 
 Contoh peta.json (path html/css relatif terhadap file JSON):
 
@@ -152,9 +159,13 @@ def svg(nama, L, pos, sisi, sh, peta, ind, laporan):
         mx, my = round(x1 + (x2 - x1) * f), round(y1 + (y2 - y1) * f)
         w = round(len(t) * fs * .56 + fs * 1.2)
         h = round(fs * 1.7)
-        celah = round((t1 - t0) * math.hypot(x2 - x1, y2 - y1))
-        if celah < w + 80:
-            laporan.append(f'SEMPIT  {nama}: label "{t}" ({a} → {b}) butuh {w + 80}, celah {celah}')
+        L = math.hypot(x2 - x1, y2 - y1)
+        celah = round((t1 - t0) * L)
+        # Label selalu mendatar: di garis mendatar yang dibutuhkan lebarnya, di
+        # garis tegak tingginya, di garis miring proyeksi keduanya ke garis.
+        butuh = round(abs(x2 - x1) / L * w + abs(y2 - y1) / L * h) + 80
+        if celah < butuh:
+            laporan.append(f'SEMPIT  {nama}: label "{t}" ({a} → {b}) butuh {butuh}, celah {celah}')
         out.append(f'{ind}    <g class="dg-label" transform="translate({mx} {my})"><rect x="{-w // 2}" y="{-h // 2}" width="{w}" height="{h}" rx="{h // 2}"/><text>{t}</text></g>')
     out += [f'{ind}  </g>', f'{ind}</svg>']
     return out
@@ -175,10 +186,13 @@ def aturan(pos, ind):
                      f'{f" --croot-scale: {k};" if k != 1 else ""} }}' for i, (x, y, k) in pos.items())
 
 
-def main():
-    if len(sys.argv) != 2:
-        sys.exit(__doc__)
-    spek_p = sys.argv[1]
+def buat(spek_p):
+    """Hitung hasil tanpa menulis apa pun.
+
+    Mengembalikan (berkas, laporan, info): berkas = {path: isi baru},
+    laporan = daftar TUMPANG/SEMPIT, info = ringkasan untuk dicetak.
+    Bisa dipakai dari skrip lain: import peta; peta.buat('peta.json').
+    """
     dasar = os.path.dirname(os.path.abspath(spek_p))
     spek = baca_spek(spek_p)
     html_p, css_p = os.path.join(dasar, spek['html']), os.path.join(dasar, spek['css'])
@@ -207,7 +221,6 @@ def main():
     for id in hasil['desktop'][1]:
         html = re.sub(r'(<\w+[^>]*\bid="%s"[^>]*?)>' % re.escape(id),
                       lambda t: re.sub(r' data-croot-(x|y|scale)="[^"]*"', '', t.group(1)) + '>', html, count=1)
-    open(html_p, 'w', encoding='utf-8').write(html)
 
     Ld, pd, _s, _h, Pd = hasil['desktop']
     Lp, pp, _s2, _h2, Pp = hasil['ponsel']
@@ -242,14 +255,34 @@ def main():
         css = css[:a] + blok.rstrip('\n') + css[b:]
     else:
         css = css + ('\n' if css and not css.endswith('\n') else '') + blok
-    open(css_p, 'w', encoding='utf-8').write(css)
+    info = [f'{len(pd)} blok, {len(hasil["desktop"][2])} hubungan → {spek["html"]}, {spek["css"]}',
+            f'peta desktop {Pd[0]}x{Pd[1]} (y {Pd[2]}), ponsel {Pp[0]}x{Pp[1]} (y {Pp[2]})']
+    return {html_p: html, css_p: css}, laporan, info
 
-    print(f'{len(pd)} blok, {len(hasil["desktop"][2])} hubungan → {spek["html"]}, {spek["css"]}')
-    print(f'peta desktop {Pd[0]}x{Pd[1]} (y {Pd[2]}), ponsel {Pp[0]}x{Pp[1]} (y {Pp[2]})')
+
+def main():
+    args = [a for a in sys.argv[1:] if a != '--cek']
+    cek = '--cek' in sys.argv[1:]
+    if len(args) != 1:
+        sys.exit(__doc__)
+    berkas, laporan, info = buat(args[0])
+    beda = [p for p, isi in berkas.items()
+            if not os.path.exists(p) or open(p, encoding='utf-8').read() != isi]
+    if cek:
+        # Mode CI: tidak menulis apa pun; gagal bila berkas belum sesuai peta.json.
+        for p in beda:
+            print(f'BEDA    {os.path.relpath(p)} belum sesuai peta.json; jalankan peta.py tanpa --cek')
+    else:
+        for p in beda:
+            open(p, 'w', encoding='utf-8').write(berkas[p])
+        for l in info:
+            print(l)
     for l in laporan:
         print(l)
-    if laporan:
+    if laporan or (cek and beda):
         sys.exit(1)
+    if cek:
+        print('peta sesuai peta.json')
 
 
 if __name__ == '__main__':

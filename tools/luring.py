@@ -17,6 +17,7 @@ internet sama sekali:
 Hanya pustaka standar Python 3. Tautan biasa (<a href>, canonical, Open
 Graph) tidak diubah karena bukan bagian dari tampilan slide.
 """
+import fnmatch
 import hashlib
 import os
 import posixpath
@@ -30,7 +31,11 @@ import urllib.request
 UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 SERVE_PS1 = 'https://crootss.if.co.id/serve.ps1'
 TEKS = ('.html', '.htm', '.css', '.js', '.mjs')
-LEWATI = {'.git', 'node_modules', '__pycache__'}
+# Berkas pengembangan yang tidak perlu dibawa ke ruang presentasi. Tambah
+# sendiri lewat .luringignore di folder deck: satu pola per baris (gaya
+# .gitignore sederhana: *.psd, catatan/, /draf.html), # untuk komentar.
+LEWATI = ['.git', '.github', 'node_modules', '__pycache__', '.luringignore', '.gitignore',
+          'peta.json', 'tools/', '*.py', 'README.md', '*.pdf']
 
 # Konteks yang memuat aset. Grup "u" = alamatnya.
 POLA = {
@@ -52,6 +57,35 @@ POLA = {
         r'\bimport\(\s*["\'](?P<u>[^"\']+)["\']\s*\)',
     ],
 }
+
+
+def baca_pola(deck):
+    pola = list(LEWATI)
+    f = os.path.join(deck, '.luringignore')
+    if os.path.exists(f):
+        for baris in open(f, encoding='utf-8'):
+            baris = baris.strip()
+            if baris and not baris.startswith('#'):
+                pola.append(baris)
+    return pola
+
+
+def cocok(rel, folder, pola):
+    """rel: path relatif deck (pakai /). Pola berakhiran / hanya untuk folder;
+    pola berawalan / atau berisi / dicocokkan dengan path dari akar deck,
+    selain itu dengan nama berkas di folder mana pun."""
+    nama = rel.rsplit('/', 1)[-1]
+    for p in pola:
+        hanya_folder = p.endswith('/')
+        p = p.rstrip('/')
+        if hanya_folder and not folder:
+            continue
+        if '/' in p:
+            if fnmatch.fnmatch(rel, p.lstrip('/')):
+                return True
+        elif fnmatch.fnmatch(nama, p):
+            return True
+    return False
 
 
 def jenis(path):
@@ -142,6 +176,9 @@ class Paket:
             r = ganti(u)
             if r is not None:
                 baru = baru[:a] + r + baru[b:]
+        if j == 'html':
+            # preconnect/dns-prefetch ke CDN tidak berguna tanpa internet.
+            baru = re.sub(r'[ \t]*<link\b(?=[^>]*\brel=["\'](?:preconnect|dns-prefetch)["\'])(?=[^>]*\bhref=["\']https?://)[^>]*>[ \t]*\n?', '', baru, flags=re.I)
         if baru != teks:
             open(path, 'w', encoding='utf-8', errors='surrogateescape').write(baru)
 
@@ -155,7 +192,14 @@ def main():
         sys.exit('Folder keluaran tidak boleh berada di dalam folder deck')
     if os.path.exists(keluar):
         shutil.rmtree(keluar)
-    shutil.copytree(deck, keluar, ignore=lambda d, names: [n for n in names if n in LEWATI])
+    pola = baca_pola(deck)
+
+    def abaikan(d, names):
+        rel = os.path.relpath(d, deck).replace(os.sep, '/')
+        rel = '' if rel == '.' else rel + '/'
+        return [n for n in names if cocok(rel + n, os.path.isdir(os.path.join(d, n)), pola)]
+
+    shutil.copytree(deck, keluar, ignore=abaikan)
     print(f'Salin {deck} → {keluar}')
 
     pk = Paket(deck, keluar)

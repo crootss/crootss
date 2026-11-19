@@ -9,6 +9,7 @@
 
 var NODE = '.croot-node';
 var PROPS = ['x', 'y', 'z', 'rx', 'ry', 'rz', 'scale'];
+var REPLACED = /^(IMG|VIDEO|CANVAS|IFRAME|EMBED|OBJECT|INPUT|SELECT|TEXTAREA|BUTTON)$/;
 var INTERACTIVE = 'a, button, input, select, textarea, label, summary, [contenteditable], [tabindex]:not(.croot-node)';
 
 /* ---------- util ---------- */
@@ -174,24 +175,68 @@ export function croot(root, options) {
 
   /* ---------- debug: isi meluap ---------- */
 
-  // Tandai node yang isinya melewati batas node. Diukur dari offsetLeft/Top
-  // (tata letak tanpa transform), jadi tidak terpengaruh kamera atau animasi
-  // masuk. Dekorasi ::before/::after tidak ikut diukur.
+  // Tandai node yang isinya melewati batas node. Node yang sebidang dengan
+  // layar (tanpa rotasi) diukur dari kotak yang benar-benar tergambar:
+  // getClientRects() per elemen dan per potongan teks, relatif terhadap kotak
+  // node. Proyeksi bidang yang sejajar layar hanyalah skala seragam, jadi
+  // posisi kamera tidak berpengaruh. Isi yang dipotong elemen ber-overflow
+  // (mis. <pre> bergulir) tidak dihitung; dekorasi ::before/::after juga tidak.
+  function visualOverflow(node, bad) {
+    var nr = node.getBoundingClientRect(), k = nr.width / node.offsetWidth;
+    if (!(k > 0)) return;
+    var tol = 4 * k; // 4px node: abaikan selisih subpiksel antar-browser
+    function out(r) {
+      return r.width > 0 && r.height > 0 &&
+        (r.left < nr.left - tol || r.top < nr.top - tol || r.right > nr.right + tol || r.bottom > nr.bottom + tol);
+    }
+    function anyOut(list) {
+      for (var i = 0; i < list.length; i++) if (out(list[i])) return true;
+      return false;
+    }
+    var range = document.createRange();
+    (function walk(el) {
+      for (var c = el.firstChild; c; c = c.nextSibling) {
+        if (c.nodeType === 3) {
+          if (!/\S/.test(c.data)) continue;
+          range.selectNodeContents(c);
+          if (anyOut(range.getClientRects()) && bad.indexOf(el) < 0 && el !== node) bad.push(el);
+        } else if (c.nodeType === 1 && !c.matches(NODE)) {
+          if (anyOut(c.getClientRects())) bad.push(c);
+          var cs = getComputedStyle(c);
+          if (cs.display === 'none' || c instanceof SVGElement) continue;
+          if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') continue; // isinya terpotong
+          walk(c);
+        }
+      }
+    })(node);
+  }
+
+  // Node yang diputar: kotak layar miring, jadi ukur dari tata letak
+  // (offsetLeft/Top, scrollWidth) tanpa transform.
+  function layoutOverflow(node, bad) {
+    var W = node.clientWidth, H = node.clientHeight;
+    node.querySelectorAll('*').forEach(function (el) {
+      if (!(el instanceof HTMLElement) || el.closest(NODE) !== node) return; // anak node diukur sendiri
+      var cs = getComputedStyle(el);
+      // Elemen inline yang terpotong ke baris berikutnya tidak bisa diukur
+      // begini; luapannya terlihat lewat scrollWidth blok induknya.
+      if (cs.display === 'inline' && !REPLACED.test(el.tagName)) return;
+      var x = 0, y = 0, p = el;
+      while (p && p !== node) { x += p.offsetLeft; y += p.offsetTop; p = p.offsetParent; }
+      if (p !== node) return; // tersembunyi atau position: fixed
+      var w = Math.max(el.offsetWidth, cs.overflowX === 'visible' ? el.scrollWidth : 0);
+      var h = Math.max(el.offsetHeight, cs.overflowY === 'visible' ? el.scrollHeight : 0);
+      if (x < -1 || y < -1 || x + w > W + 1 || y + h > H + 1) bad.push(el);
+    });
+  }
+
   function checkOverflow() {
     var found = [];
     root.querySelectorAll('.croot-overflow-el').forEach(function (el) { el.classList.remove('croot-overflow-el'); });
     all.forEach(function (node) {
-      var W = node.clientWidth, H = node.clientHeight, bad = [];
-      node.querySelectorAll('*').forEach(function (el) {
-        if (!(el instanceof HTMLElement) || el.closest(NODE) !== node) return; // anak node diukur sendiri
-        var x = 0, y = 0, p = el;
-        while (p && p !== node) { x += p.offsetLeft; y += p.offsetTop; p = p.offsetParent; }
-        if (p !== node) return; // tersembunyi atau position: fixed
-        var cs = getComputedStyle(el);
-        var w = Math.max(el.offsetWidth, cs.overflowX === 'visible' ? el.scrollWidth : 0);
-        var h = Math.max(el.offsetHeight, cs.overflowY === 'visible' ? el.scrollHeight : 0);
-        if (x < -1 || y < -1 || x + w > W + 1 || y + h > H + 1) bad.push(el);
-      });
+      var bad = [], m = worldMatrix(node);
+      var flat = Math.abs(m.b) + Math.abs(m.c) + Math.abs(m.m13) + Math.abs(m.m23) + Math.abs(m.m31) + Math.abs(m.m32) < 1e-6;
+      (flat ? visualOverflow : layoutOverflow)(node, bad);
       // Hanya elemen terluar yang ditandai; anaknya ikut meluap bersamanya.
       bad = bad.filter(function (el) { return !bad.some(function (o) { return o !== el && o.contains(el); }); });
       node.classList.toggle('croot-overflow', bad.length > 0);
@@ -243,9 +288,24 @@ export function croot(root, options) {
     if (printBox) printBox.remove();
     printBox = null;
   }
-  function print() {
+  // dialog === false: hanya siapkan halaman cetak (untuk Chromium headless /
+  // otomatisasi); <html data-croot-print="siap"> menandai halaman sudah siap.
+  function print(dialog) {
     buildPrint();
-    window.print();
+    document.documentElement.setAttribute('data-croot-print', 'siap');
+    if (dialog !== false) window.print();
+  }
+
+  /* ---------- gambar layar penuh (data-croot-zoom) ---------- */
+
+  function zoomIn(el) {
+    var fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (fs) {
+      var r = fs.call(el);
+      if (r && r.catch) r.catch(function () {});
+    } else if (el.currentSrc || el.src) {
+      window.open(el.currentSrc || el.src, '_blank'); // iPhone: tanpa fullscreen elemen
+    }
   }
 
   /* ---------- presenter: catatan, waktu, langkah berikutnya ---------- */
@@ -437,6 +497,8 @@ export function croot(root, options) {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
     var t = e.target;
     if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    var full = document.fullscreenElement || document.webkitFullscreenElement;
+    if (full && root.contains(full)) return; // gambar layar penuh: biarkan browser (Esc menutupnya)
     var k = e.key;
     if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || (k === ' ' && !e.shiftKey)) next();
     else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || (k === ' ' && e.shiftKey)) prev();
@@ -450,6 +512,13 @@ export function croot(root, options) {
 
   // Event delegation: satu listener untuk seluruh kanvas.
   function onClick(e) {
+    // Gambar/diagram ber-data-croot-zoom di node aktif: tampilkan layar penuh.
+    var zoom = e.target.closest('[data-croot-zoom]');
+    if (zoom && root.contains(zoom) && !inOverview && zoom.closest(NODE) === current) {
+      e.preventDefault();
+      zoomIn(zoom);
+      return;
+    }
     var trigger = e.target.closest('[data-croot-target]');
     if (trigger && root.contains(trigger)) {
       e.preventDefault();
@@ -563,11 +632,16 @@ export function croot(root, options) {
   };
   root.croot = api;
 
-  // ?print di URL: langsung buka dialog cetak setelah font dan gambar siap.
-  if (/[?&]print(=|&|$)/.test(location.search)) {
+  // ?print di URL: buka dialog cetak setelah font dan gambar siap.
+  // ?print=pdf: siapkan halaman cetak saja, tanpa dialog (Chromium headless,
+  // tools/pdf.py).
+  var printParam = /[?&]print(?:=([^&]*))?(?:&|$)/.exec(location.search);
+  if (printParam) {
     var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
     var loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(function (r) { window.addEventListener('load', r, { once: true }); });
-    Promise.all([ready, loaded]).then(function () { setTimeout(print, 300); });
+    Promise.all([ready, loaded]).then(function () {
+      setTimeout(function () { print(printParam[1] !== 'pdf'); }, 300);
+    });
   }
   return api;
 }
